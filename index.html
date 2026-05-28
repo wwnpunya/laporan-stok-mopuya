@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Laporan Barang & Transaksi Teknisi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-6">
+  <div class="max-w-7xl mx-auto">
+    <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+      <h1 class="text-3xl font-bold mb-2">Laporan Barang & Teknisi</h1>
+      <p class="text-gray-600">Kategori: MODEM, ADAPTOR, SPLITTER 1/8, SPLITTER 1/4, SPLITTER 1/2, KABEL</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="bg-white rounded-2xl shadow-lg p-6">
+        <h2 class="text-2xl font-semibold mb-4">Input Transaksi</h2>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium mb-1">Tanggal</label>
+            <input type="date" id="tanggal" class="w-full border rounded-lg p-2" />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium mb-1">Jenis Transaksi</label>
+            <select id="jenis" class="w-full border rounded-lg p-2">
+              <option value="Pemasangan">Pemasangan</option>
+              <option value="Penggantian">Penggantian</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium mb-1">Kategori Barang</label>
+            <select id="kategori" class="w-full border rounded-lg p-2">
+              <option>MODEM</option>
+              <option>ADAPTOR</option>
+              <option>SPLITTER 1/8</option>
+              <option>SPLITTER 1/4</option>
+              <option>SPLITTER 1/2</option>
+              <option>KABEL</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium mb-1">Jumlah Barang Keluar</label>
+            <input type="number" id="jumlah" class="w-full border rounded-lg p-2" placeholder="Masukkan jumlah" />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium mb-1">Nama Teknisi</label>
+            <input type="text" id="teknisi" class="w-full border rounded-lg p-2" placeholder="Nama Teknisi" />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium mb-1">Keterangan</label>
+            <textarea id="keterangan" class="w-full border rounded-lg p-2" rows="3" placeholder="Keterangan tambahan"></textarea>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <button onclick="simpanData()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-xl">
+              Simpan Data
+            </button>
+
+            <button onclick="exportCSV()" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-xl">
+              Export CSV
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-lg p-6">
+        <h2 class="text-2xl font-semibold mb-4">Pengaturan Telegram</h2>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium mb-1">Bot Token</label>
+            <input type="text" id="botToken" class="w-full border rounded-lg p-2" placeholder="5256625489:AAFHoY0GjQ0NmtsLL-yomYy0xpt2jy1ZOUg" />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium mb-1">Chat ID</label>
+            <input type="text" id="chatId" class="w-full border rounded-lg p-2" placeholder="-5292560861" />
+          </div>
+
+          <button onclick="simpanTelegram()" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-xl w-full">
+            Simpan Telegram
+          </button>
+
+          <div class="bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-xl p-4 text-sm">
+            Notifikasi otomatis akan dikirim setiap transaksi berhasil disimpan.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-lg p-6 mt-6">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+        <h2 class="text-2xl font-semibold">Data Transaksi</h2>
+
+        <input type="text" id="search" onkeyup="renderTable()" placeholder="Cari teknisi / kategori..."
+          class="border rounded-lg p-2 w-full md:w-72" />
+      </div>
+
+      <div class="overflow-auto">
+        <table class="w-full border-collapse border border-gray-300">
+          <thead>
+            <tr class="bg-gray-200">
+              <th class="border p-2">Tanggal</th>
+              <th class="border p-2">Jenis</th>
+              <th class="border p-2">Kategori</th>
+              <th class="border p-2">Jumlah</th>
+              <th class="border p-2">Teknisi</th>
+              <th class="border p-2">Keterangan</th>
+              <th class="border p-2">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-lg p-6 mt-6">
+      <h2 class="text-2xl font-semibold mb-4">Rekap Barang Keluar</h2>
+      <div id="rekap" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+    </div>
+  </div>
+
+  <script>
+    let dataTransaksi = JSON.parse(localStorage.getItem('dataTransaksi')) || [];
+
+    const kategoriList = [
+      'MODEM',
+      'ADAPTOR',
+      'SPLITTER 1/8',
+      'SPLITTER 1/4',
+      'SPLITTER 1/2',
+      'KABEL'
+    ];
+
+    function simpanTelegram() {
+      localStorage.setItem('botToken', document.getElementById('botToken').value);
+      localStorage.setItem('chatId', document.getElementById('chatId').value);
+      alert('Pengaturan Telegram berhasil disimpan');
+    }
+
+    function loadTelegram() {
+      document.getElementById('botToken').value = localStorage.getItem('botToken') || '';
+      document.getElementById('chatId').value = localStorage.getItem('chatId') || '';
+    }
+
+    async function kirimTelegram(pesan) {
+      const token = localStorage.getItem('botToken');
+      const chatId = localStorage.getItem('chatId');
+
+      if (!token || !chatId) {
+        console.log('Telegram belum diatur');
+        return;
+      }
+
+      try {
+        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: pesan
+          })
+        });
+      } catch (error) {
+        console.error('Gagal kirim Telegram:', error);
+      }
+    }
+
+    function simpanData() {
+      const tanggal = document.getElementById('tanggal').value;
+      const jenis = document.getElementById('jenis').value;
+      const kategori = document.getElementById('kategori').value;
+      const jumlah = document.getElementById('jumlah').value;
+      const teknisi = document.getElementById('teknisi').value;
+      const keterangan = document.getElementById('keterangan').value;
+
+      if (!tanggal || !jumlah || !teknisi) {
+        alert('Lengkapi data terlebih dahulu');
+        return;
+      }
+
+      const transaksi = {
+        id: Date.now(),
+        tanggal,
+        jenis,
+        kategori,
+        jumlah: parseInt(jumlah),
+        teknisi,
+        keterangan
+      };
+
+      dataTransaksi.push(transaksi);
+      localStorage.setItem('dataTransaksi', JSON.stringify(dataTransaksi));
+
+      const pesan = `📦 Transaksi Barang\n\nTanggal: ${tanggal}\nJenis: ${jenis}\nKategori: ${kategori}\nJumlah: ${jumlah}\nTeknisi: ${teknisi}\nKeterangan: ${keterangan}`;
+
+      kirimTelegram(pesan);
+
+      renderTable();
+      renderRekap();
+      resetForm();
+
+      alert('Data berhasil disimpan');
+    }
+
+    function resetForm() {
+      document.getElementById('jumlah').value = '';
+      document.getElementById('teknisi').value = '';
+      document.getElementById('keterangan').value = '';
+    }
+
+    function hapusData(id) {
+      if (confirm('Yakin ingin menghapus data?')) {
+        dataTransaksi = dataTransaksi.filter(item => item.id !== id);
+        localStorage.setItem('dataTransaksi', JSON.stringify(dataTransaksi));
+        renderTable();
+        renderRekap();
+      }
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('tableBody');
+      const keyword = document.getElementById('search').value.toLowerCase();
+
+      tbody.innerHTML = '';
+
+      dataTransaksi
+        .filter(item =>
+          item.kategori.toLowerCase().includes(keyword) ||
+          item.teknisi.toLowerCase().includes(keyword)
+        )
+        .forEach(item => {
+          tbody.innerHTML += `
+            <tr>
+              <td class="border p-2">${item.tanggal}</td>
+              <td class="border p-2">${item.jenis}</td>
+              <td class="border p-2">${item.kategori}</td>
+              <td class="border p-2 text-center">${item.jumlah}</td>
+              <td class="border p-2">${item.teknisi}</td>
+              <td class="border p-2">${item.keterangan}</td>
+              <td class="border p-2 text-center">
+                <button onclick="hapusData(${item.id})"
+                  class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg">
+                  Hapus
+                </button>
+              </td>
+            </tr>
+          `;
+        });
+    }
+
+    function renderRekap() {
+      const rekapDiv = document.getElementById('rekap');
+      rekapDiv.innerHTML = '';
+
+      kategoriList.forEach(kategori => {
+        const total = dataTransaksi
+          .filter(item => item.kategori === kategori)
+          .reduce((sum, item) => sum + item.jumlah, 0);
+
+        rekapDiv.innerHTML += `
+          <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+            <h3 class="font-bold text-lg">${kategori}</h3>
+            <p class="text-3xl font-bold mt-2">${total}</p>
+            <p class="text-gray-600">Total Barang Keluar</p>
+          </div>
+        `;
+      });
+    }
+
+    function exportCSV() {
+      let csv = 'Tanggal,Jenis,Kategori,Jumlah,Teknisi,Keterangan\n';
+
+      dataTransaksi.forEach(item => {
+        csv += `${item.tanggal},${item.jenis},${item.kategori},${item.jumlah},${item.teknisi},${item.keterangan}\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'laporan_barang.csv');
+      link.style.visibility = 'hidden';
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    loadTelegram();
+    renderTable();
+    renderRekap();
+  </script>
+</body>
+</html>
