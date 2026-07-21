@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Laporan Barang & Transaksi Teknisi</title>
   <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-gray-100 min-h-screen p-6">
   <div class="max-w-7xl mx-auto">
@@ -128,7 +129,45 @@
   </div>
 
   <script>
-    let dataTransaksi = JSON.parse(localStorage.getItem('dataTransaksi')) || [];
+const SUPABASE_URL="https://hzzbsxlfexqwwfzrvlfz.supabase.co";
+const SUPABASE_ANON_KEY="sb_publishable_YC0AqTDK0zA5BrGOUsCa3Q_SZ4Mdkn_";
+const TABLE_NAME="transaksi_barang";
+
+const supabase = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
+);
+
+
+async function loadFromSupabase(){
+  const {data,error}=await supabase.from(TABLE_NAME).select("*").order("created_at",{ascending:false});
+  if(!error && data){
+    dataTransaksi=data;
+    renderTable();
+    renderRekap();
+  }
+}
+
+
+const realtimeChannel = supabase
+  .channel('transaksi-barang-realtime')
+  .on(
+    'postgres_changes',
+    {
+      event: '*',
+      schema: 'public',
+      table: TABLE_NAME
+    },
+    () => {
+      loadFromSupabase();
+    }
+  )
+  .subscribe();
+
+</script>
+
+<script>
+    let dataTransaksi = [];
 
     const kategoriList = [
       'MODEM',
@@ -175,7 +214,7 @@
       }
     }
 
-    function simpanData() {
+    async function simpanData() {
       const tanggal = document.getElementById('tanggal').value;
       const jenis = document.getElementById('jenis').value;
       const kategori = document.getElementById('kategori').value;
@@ -189,7 +228,6 @@
       }
 
       const transaksi = {
-        id: Date.now(),
         tanggal,
         jenis,
         kategori,
@@ -198,18 +236,25 @@
         keterangan
       };
 
-      dataTransaksi.push(transaksi);
-      localStorage.setItem('dataTransaksi', JSON.stringify(dataTransaksi));
+      const { error } = await supabase
+        .from(TABLE_NAME)
+        .insert([transaksi]);
+
+      if (error) {
+        console.error('Gagal menyimpan:', error);
+        alert('Gagal menyimpan ke Supabase: ' + error.message);
+        return;
+      }
 
       const pesan = `📦 Transaksi Barang\n\nTanggal: ${tanggal}\nJenis: ${jenis}\nKategori: ${kategori}\nJumlah: ${jumlah}\nTeknisi: ${teknisi}\nKeterangan: ${keterangan}`;
 
       kirimTelegram(pesan);
-
-      renderTable();
-      renderRekap();
       resetForm();
 
-      alert('Data berhasil disimpan');
+      // Refresh langsung; Realtime juga akan menyinkronkan perangkat lain.
+      await loadFromSupabase();
+
+      alert('Data berhasil disimpan ke Supabase');
     }
 
     function resetForm() {
@@ -218,13 +263,26 @@
       document.getElementById('keterangan').value = '';
     }
 
-    function hapusData(id) {
-      if (confirm('Yakin ingin menghapus data?')) {
-        dataTransaksi = dataTransaksi.filter(item => item.id !== id);
-        localStorage.setItem('dataTransaksi', JSON.stringify(dataTransaksi));
-        renderTable();
-        renderRekap();
+    async function hapusData(id) {
+      if (!confirm('Yakin ingin menghapus data?')) {
+        return;
       }
+
+      const { error } = await supabase
+        .from(TABLE_NAME)
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Gagal menghapus:', error);
+        alert('Gagal menghapus data dari Supabase: ' + error.message);
+        return;
+      }
+
+      // Refresh langsung; Realtime juga akan menyinkronkan perangkat lain.
+      await loadFromSupabase();
+
+      alert('Data berhasil dihapus dari Supabase');
     }
 
     function renderTable() {
@@ -298,6 +356,7 @@
     }
 
     loadTelegram();
+    loadFromSupabase();
     renderTable();
     renderRekap();
   </script>
