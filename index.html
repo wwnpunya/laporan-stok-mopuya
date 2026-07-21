@@ -12,6 +12,11 @@
     <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
       <h1 class="text-3xl font-bold mb-2">Laporan Barang & Teknisi</h1>
       <p class="text-gray-600">Kategori: MODEM, ADAPTOR, SPLITTER 1/8, SPLITTER 1/4, SPLITTER 1/2, KABEL</p>
+      <div class="mt-3">
+        <span id="supabaseStatus" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gray-200 text-gray-700">
+          ⏳ Checking Supabase...
+        </span>
+      </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -139,12 +144,39 @@ const supabase = window.supabase.createClient(
 );
 
 
+function setSupabaseStatus(connected) {
+  const status = document.getElementById('supabaseStatus');
+  if (!status) return;
+
+  if (connected) {
+    status.textContent = '🟢 Supabase Connected';
+    status.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800';
+  } else {
+    status.textContent = '🔴 Supabase Disconnected';
+    status.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-red-100 text-red-800';
+  }
+}
+
 async function loadFromSupabase(){
-  const {data,error}=await supabase.from(TABLE_NAME).select("*").order("created_at",{ascending:false});
-  if(!error && data){
-    dataTransaksi=data;
+  try {
+    const {data,error}=await supabase
+      .from(TABLE_NAME)
+      .select("*")
+      .order("created_at",{ascending:false});
+
+    if (error) {
+      console.error('Supabase connection error:', error);
+      setSupabaseStatus(false);
+      return;
+    }
+
+    setSupabaseStatus(true);
+    dataTransaksi=data || [];
     renderTable();
     renderRekap();
+  } catch (error) {
+    console.error('Supabase connection error:', error);
+    setSupabaseStatus(false);
   }
 }
 
@@ -162,7 +194,13 @@ const realtimeChannel = supabase
       loadFromSupabase();
     }
   )
-  .subscribe();
+  .subscribe((status) => {
+    if (status === 'SUBSCRIBED') {
+      setSupabaseStatus(true);
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      setSupabaseStatus(false);
+    }
+  });
 
 </script>
 
