@@ -138,7 +138,7 @@ const SUPABASE_URL="https://hzzbsxlfexqwwfzrvlfz.supabase.co";
 const SUPABASE_ANON_KEY="sb_publishable_YC0AqTDK0zA5BrGOUsCa3Q_SZ4Mdkn_";
 const TABLE_NAME="transaksi_barang";
 
-const supabase = window.supabase.createClient(
+const supabaseClient = window.supabase.createClient(
     SUPABASE_URL,
     SUPABASE_ANON_KEY
 );
@@ -159,8 +159,7 @@ function setSupabaseStatus(connected) {
 
 async function loadFromSupabase(){
   try {
-    const {data,error}=await supabase
-      .from(TABLE_NAME)
+    const {data,error}=await supabaseClient.from(TABLE_NAME)
       .select("*")
       .order("created_at",{ascending:false});
 
@@ -181,8 +180,7 @@ async function loadFromSupabase(){
 }
 
 
-const realtimeChannel = supabase
-  .channel('transaksi-barang-realtime')
+const realtimeChannel = supabaseClient.channel('transaksi-barang-realtime')
   .on(
     'postgres_changes',
     {
@@ -273,8 +271,7 @@ const realtimeChannel = supabase
         keterangan
       };
 
-      const { error } = await supabase
-        .from(TABLE_NAME)
+      const { error } = await supabaseClient.from(TABLE_NAME)
         .insert([transaksi]);
 
       if (error) {
@@ -305,8 +302,7 @@ const realtimeChannel = supabase
         return;
       }
 
-      const { error } = await supabase
-        .from(TABLE_NAME)
+      const { error } = await supabaseClient.from(TABLE_NAME)
         .delete()
         .eq('id', id);
 
