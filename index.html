@@ -195,9 +195,8 @@ const realtimeChannel = supabase
     }
   )
   .subscribe((status) => {
-    if (status === 'SUBSCRIBED') {
-      setSupabaseStatus(true);
-    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+    console.log('Realtime status:', status);
+    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
       setSupabaseStatus(false);
     }
   });
@@ -393,10 +392,22 @@ const realtimeChannel = supabase
       document.body.removeChild(link);
     }
 
-    loadTelegram();
-    loadFromSupabase();
-    renderTable();
-    renderRekap();
+    window.addEventListener('DOMContentLoaded', async () => {
+      loadTelegram();
+      renderTable();
+      renderRekap();
+
+      // Jika Supabase tidak merespons dalam 8 detik, tampilkan disconnected.
+      const timeoutId = setTimeout(() => {
+        const status = document.getElementById('supabaseStatus');
+        if (status && status.textContent.includes('Checking')) {
+          setSupabaseStatus(false);
+        }
+      }, 8000);
+
+      await loadFromSupabase();
+      clearTimeout(timeoutId);
+    });
   </script>
 </body>
 </html>
